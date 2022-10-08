@@ -1,0 +1,93 @@
+html,body {
+    margin:0; 
+    padding:0;
+    height: 100%;
+    width: 100%;} 
+
+#login-form{
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%,-50%);
+    border: 1px solid black;
+    background-color: #fff;
+    border-radius: 10px;}
+
+#name {
+    opacity: 50%;
+    border-radius: 10px;
+    text-align: center;
+    border:  0;
+    width: 300px;
+    height: 45px;
+    font-size: 20px;}
+
+#login-form button {
+    border: 0;
+    position: relative;
+    background-color: #fff;
+    opacity: 100%;
+    width: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    height: 30px;
+    text-align: center;
+    border-radius: 10px;}
+
+#clock h2{
+    margin: 0;
+    padding: 0;
+    position: absolute;
+    top: 10px;
+    left: 10px;
+}
+.hidden {
+    display: none;
+}
+
+#onLogin {
+    width: 90%;
+    height: 100%;
+    margin-left: 5%;
+    background: #fff;
+    opacity: 50%;
+    border-radius: 20px;
+}
+#onLogin #user p{
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 4em;
+    padding-top: 10px;
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+#onLogin #todo-form{
+    width: 100%;
+    height: 100%;
+}
+
+#onLogin #todo-form input{
+    font-size: 2em;
+    text-align: center;
+    border-radius: 15px;
+    width: 90%;
+    height: 1.5em;
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+#onLogin #todo-list {
+    font-size: 2em;
+    display: block;
+    width: 170%;
+    position: relative;
+
+}
+#onLogin #todo-list li {
+    margin-left: 60px;
+}
+#onLogin #todo-list li button{
+    position: relative;
+    left: 50%;
+}
