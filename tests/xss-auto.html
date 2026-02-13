@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Auto-Execute XSS Tester</title>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial; max-width: 800px; margin: 50px auto; background: #f0f0f0; }
+        .result { border: 2px solid #dc3545; padding: 20px; background: #fff; border-radius: 5px; }
+        h3 { color: #dc3545; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Auto-Execute XSS Page</h1>
+    <p><strong>이 페이지는 접근 시 자동으로 JavaScript 실행</strong></p>
+    
+    <div class="result">
+        <h3>XSS 자동 실행됨!</h3>
+        <p><strong>파라미터:</strong> <span id="param"></span></p>
+        <p><strong>실행 영역 (아래 공간에서 페이로드 실행):</strong></p>
+        <div id="vuln" style="border:1px dashed red; padding:10px; min-height:50px;"></div>
+    </div>
+
+    <script>
+        // 파라미터 추출
+        const urlParams = new URLSearchParams(window.location.search);
+        const q = urlParams.get('q') || urlParams.get('search') ;
+        
+        // 파라미터 표시
+        document.getElementById('param').textContent = q;
+        
+        // 여기가 핵심: innerHTML으로 직접 삽입 → XSS 실행!
+        document.getElementById('vuln').innerHTML = q;
+        
+        // 추가: 자동 alert (파라미터 없어도 실행)
+        if (!urlParams.get('q') && !urlParams.get('search')) {
+            setTimeout(() => {
+                alert('Auto XSS Triggered! Domain: ' + document.domain);
+            }, 500);
+        }
+    </script>
+</body>
+</html>
