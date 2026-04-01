@@ -1,0 +1,11 @@
+<script>
+var result = [];
+for (var key in window) {
+  try {
+    if (typeof window[key] === 'object' && window[key] !== null) {
+      result.push(key + ' : ' + window[key]);
+    }
+  } catch(e) {}
+}
+document.write(result.join('<br>'));
+</script>
